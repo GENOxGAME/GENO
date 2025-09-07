@@ -511,6 +511,7 @@ function buyBooster(booster) {
         if (booster.id === 'energy_refill') {
             // Полное восстановление энергии
             gameState.energy = gameState.maxEnergy;
+            gameState.lastEnergyRecovery = Date.now(); // Reset recovery timer
             showNotification(`Энергия полностью восстановлена! (${gameState.maxEnergy})`);
         }
     } else {
@@ -840,11 +841,20 @@ function gameLoop() {
     // Energy Recovery (1 hour for full recovery regardless of max energy)
     const energyRecoveryRate = gameState.maxEnergy / 3600; // Energy per second for 1 hour recovery
     const secondsPassed = (now - gameState.lastEnergyRecovery) / 1000;
+    
     if (secondsPassed > 0) {
         const energyToAdd = Math.floor(energyRecoveryRate * secondsPassed);
         if (energyToAdd > 0) {
+            const oldEnergy = gameState.energy;
             gameState.energy = Math.min(gameState.maxEnergy, gameState.energy + energyToAdd);
+            
+            // Always update lastEnergyRecovery when we process energy recovery
             gameState.lastEnergyRecovery = now;
+            
+            // Debug log for energy recovery
+            if (gameState.energy !== oldEnergy) {
+                console.log(`Energy recovered: ${oldEnergy} -> ${gameState.energy} (+${energyToAdd})`);
+            }
         }
     }
     
@@ -878,6 +888,11 @@ function gameLoop() {
     
     updateDisplay();
     saveGame();
+    
+    // Send data to backend every 5 seconds
+    if (Math.floor(now / 1000) % 5 === 0) {
+        sendChangesToBackend();
+    }
     
     // Submit to leaderboard every 30 seconds
     if (Math.floor(now / 1000) % 30 === 0) {
@@ -941,6 +956,8 @@ async function loadGame() {
                 const data = await response.json();
                 if (data.success && data.player) {
                     gameState = { ...gameState, ...data.player };
+                    // Reset energy recovery timer to prevent instant energy recovery
+                    gameState.lastEnergyRecovery = Date.now();
                     console.log('Game loaded from backend');
                     checkReferral();
                     updateDisplay();
@@ -956,6 +973,8 @@ async function loadGame() {
             if (!error && result) {
                 const savedData = JSON.parse(result);
                 gameState = { ...gameState, ...savedData };
+                // Reset energy recovery timer to prevent instant energy recovery
+                gameState.lastEnergyRecovery = Date.now();
                 console.log('Game loaded from Telegram Cloud Storage');
             } else {
                 console.log('No saved data found, creating new player');
@@ -1193,11 +1212,22 @@ async function loadLeaderboard() {
             const rank = index + 1;
             const rankClass = rank <= 3 ? `rank-${rank}` : '';
             
+            // Get player name with fallback
+            let playerName = 'Аноним';
+            if (player.name) {
+                playerName = player.name;
+            } else if (player.first_name) {
+                playerName = player.first_name;
+                if (player.last_name) {
+                    playerName += ` ${player.last_name}`;
+                }
+            }
+            
             return `
                 <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}">
                     <div class="leaderboard-rank ${rankClass}">${rank}</div>
                     <div class="leaderboard-player">
-                        <div class="leaderboard-name">${player.name || 'Аноним'}</div>
+                        <div class="leaderboard-name">${playerName}</div>
                         <div class="leaderboard-stage">${player.stage || 'Клетка'}</div>
                     </div>
                     <div class="leaderboard-score">
@@ -1225,10 +1255,25 @@ async function submitToLeaderboard() {
     
     try {
         const user = window.Telegram.WebApp.initDataUnsafe?.user;
+        
+        // Debug: Log user data
+        console.log('Telegram user data:', user);
+        
+        // Get user name with fallback
+        let userName = 'Аноним';
+        if (user?.first_name) {
+            userName = user.first_name;
+            if (user.last_name) {
+                userName += ` ${user.last_name}`;
+            }
+        }
+        
         const playerData = {
             id: gameState.id,
-            name: user?.first_name || 'Аноним',
+            name: userName,
             username: user?.username || null,
+            first_name: user?.first_name || null,
+            last_name: user?.last_name || null,
             geno: gameState.geno,
             stage: stages[gameState.stageIndex]?.name || 'Клетка',
             stageIndex: gameState.stageIndex,
@@ -1314,6 +1359,33 @@ async function initGame() {
     
     // Setup backend pings to prevent Render from sleeping
     setupBackendPings();
+    
+    // Debug functions for testing
+    window.debugEnergy = function() {
+        console.log('=== Energy Debug Info ===');
+        console.log('Current energy:', gameState.energy);
+        console.log('Max energy:', gameState.maxEnergy);
+        console.log('Last recovery time:', new Date(gameState.lastEnergyRecovery));
+        console.log('Time since last recovery:', (Date.now() - gameState.lastEnergyRecovery) / 1000, 'seconds');
+        console.log('Energy recovery rate:', gameState.maxEnergy / 3600, 'per second');
+        console.log('Expected energy to recover:', Math.floor((gameState.maxEnergy / 3600) * ((Date.now() - gameState.lastEnergyRecovery) / 1000)));
+    };
+    
+    window.testEnergyRecovery = function() {
+        console.log('Testing energy recovery...');
+        gameState.energy = 0;
+        gameState.lastEnergyRecovery = Date.now();
+        console.log('Energy set to 0, recovery timer reset');
+    };
+    
+    window.debugUserData = function() {
+        console.log('=== User Data Debug ===');
+        console.log('Telegram Web App available:', !!window.Telegram?.WebApp);
+        console.log('Init data unsafe:', window.Telegram?.WebApp?.initDataUnsafe);
+        console.log('User data:', window.Telegram?.WebApp?.initDataUnsafe?.user);
+        console.log('Game state ID:', gameState.id);
+        console.log('Telegram user ID:', telegramUserId);
+    };
     
     // Show welcome message
     if (gameState.totalClicks === 0) {
