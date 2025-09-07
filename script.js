@@ -30,6 +30,9 @@ let gameState = {
 let isTelegramWebApp = false;
 let telegramUserId = null;
 
+// Backend configuration
+const backendUrl = 'https://server-ebpy.onrender.com';
+
 // Initialize Telegram Web App
 function initTelegramWebApp() {
     if (window.Telegram && window.Telegram.WebApp) {
@@ -384,12 +387,21 @@ function buyUpgrade(upgrade, type, stageId) {
         (gameState.upgrades[type][stageId][upgrade.id] || 0) : 0;
     const cost = Math.floor(upgrade.cost * Math.pow(2, currentLevel));
     
+    console.log('buyUpgrade called:', {
+        upgrade: upgrade.name,
+        currentLevel,
+        cost,
+        currentGeno: gameState.geno,
+        canAfford: gameState.geno >= cost
+    });
+    
     if (gameState.geno < cost) {
-        showNotification('Недостаточно GENO!');
+        showNotification(`Недостаточно GENO! Нужно: ${formatNumber(cost)}, есть: ${formatNumber(gameState.geno)}`);
         return;
     }
     
     gameState.geno -= cost;
+    console.log('GENO after purchase:', gameState.geno);
     
     // Initialize stage upgrades if not exists
     if (!gameState.upgrades[type][stageId]) {
@@ -769,9 +781,9 @@ function updateReferralInfo() {
     const referralCount = document.getElementById('referralCount');
     const referralBonus = document.getElementById('referralBonus');
     
-    referralInput.value = `${window.location.origin}${window.location.pathname}?ref=${gameState.id}`;
-    referralCount.textContent = gameState.referrals.length;
-    referralBonus.textContent = formatNumber(gameState.referrals.length * 1000);
+    referralInput.value = getReferralLink();
+    referralCount.textContent = gameState.referrals ? gameState.referrals.length : 0;
+    referralBonus.textContent = formatNumber((gameState.referrals ? gameState.referrals.length : 0) * 1000);
 }
 
 function copyReferralLink() {
@@ -897,19 +909,45 @@ function checkReferral() {
     }
 }
 
-// Backend ping system to prevent Render from sleeping
+function getReferralLink() {
+    if (isInTelegramWebApp()) {
+        // Generate referral link for Telegram bot
+        const botUsername = 'your_bot_username'; // Replace with actual bot username
+        const referralUrl = `https://t.me/${botUsername}?start=ref_${gameState.id}`;
+        return referralUrl;
+    } else {
+        // Fallback for testing
+        return `${window.location.origin}${window.location.pathname}?ref=${gameState.id}`;
+    }
+}
+
+function shareReferralLink() {
+    const referralLink = getReferralLink();
+    
+    if (isInTelegramWebApp()) {
+        // Use Telegram Web App sharing
+        window.Telegram.WebApp.openTelegramLink(referralLink);
+    } else {
+        // Fallback for testing - copy to clipboard
+        navigator.clipboard.writeText(referralLink).then(() => {
+            showNotification('Реферальная ссылка скопирована в буфер обмена!');
+        }).catch(() => {
+            showNotification('Реферальная ссылка: ' + referralLink);
+        });
+    }
+}
+
+
+// Ping backend to prevent it from sleeping
 function pingBackend() {
     if (isInTelegramWebApp()) {
-        // Ping your Render backend every 5 minutes
-        const backendUrl = 'https://your-app-name.onrender.com/api/ping';
-        
-        fetch(backendUrl, {
+        fetch(`${backendUrl}/api/ping`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                userId: telegramUserId,
+                userId: gameState.id || telegramUserId,
                 timestamp: Date.now(),
                 action: 'keep_alive'
             })
@@ -976,28 +1014,39 @@ function showStarsPurchase() {
 
 function purchaseStars(amount) {
     if (isInTelegramWebApp()) {
-        // Use Telegram Web App payment API
-        window.Telegram.WebApp.openInvoice({
-            title: `Покупка ${amount} Telegram Stars`,
-            description: `Пополнение баланса на ${amount} ⭐ для покупки бустеров`,
-            payload: `stars_${amount}_${Date.now()}`,
-            provider_token: '', // Will be set by Telegram
-            currency: 'RUB',
-            prices: [
-                {
-                    label: `${amount} Telegram Stars`,
-                    amount: amount * 10 // 1 star = 10 kopecks
-                }
-            ]
-        }, (status) => {
-            if (status === 'paid') {
-                addTelegramStars(amount);
-                showNotification(`Покупка ${amount} ⭐ успешна!`);
-            } else if (status === 'failed') {
-                showNotification('Ошибка при покупке. Попробуйте еще раз.');
-            } else if (status === 'cancelled') {
-                showNotification('Покупка отменена.');
+        // Request payment from backend (backend will handle bot token)
+        fetch(`${backendUrl}/api/create-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                userId: gameState.id || telegramUserId,
+                amount: amount,
+                currency: 'RUB'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.invoice) {
+                // Use the invoice data from backend
+                window.Telegram.WebApp.openInvoice(data.invoice, (status) => {
+                    if (status === 'paid') {
+                        addTelegramStars(amount);
+                        showNotification(`Покупка ${amount} ⭐ успешна!`);
+                    } else if (status === 'failed') {
+                        showNotification('Ошибка при покупке. Попробуйте еще раз.');
+                    } else if (status === 'cancelled') {
+                        showNotification('Покупка отменена.');
+                    }
+                });
+            } else {
+                showNotification('Ошибка создания платежа. Попробуйте еще раз.');
             }
+        })
+        .catch(error => {
+            console.error('Payment creation error:', error);
+            showNotification('Ошибка соединения с сервером.');
         });
     } else {
         showNotification('Пополнение доступно только в Telegram!');
