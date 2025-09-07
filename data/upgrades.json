@@ -1,0 +1,521 @@
+{
+  "stageUpgrades": {
+    "0": {
+      "click": [
+        {
+          "id": "cell_membrane",
+          "name": "Усиление мембраны",
+          "effect": 1,
+          "cost": 100,
+          "desc": "+1 GENO за клик",
+          "level": 0
+        },
+        {
+          "id": "cell_energy",
+          "name": "Клеточная энергия",
+          "effect": 5,
+          "cost": 200,
+          "desc": "+5 к максимальной энергии",
+          "level": 0,
+          "type": "energy"
+        }
+      ],
+      "passive": [
+        {
+          "id": "basic_metabolism",
+          "name": "Базовый метаболизм",
+          "effect": 0.5,
+          "cost": 300,
+          "desc": "+0.5 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "cell_division",
+          "name": "Деление клетки",
+          "effect": 1,
+          "cost": 500,
+          "desc": "+1 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "protein_synthesis",
+          "name": "Синтез белков",
+          "effect": 2,
+          "cost": 800,
+          "desc": "+2 GENO/мин",
+          "level": 0
+        }
+      ]
+    },
+    "1": {
+      "click": [
+        {
+          "id": "pseudopod_strength",
+          "name": "Сила псевдоподий",
+          "effect": 2,
+          "cost": 2000,
+          "desc": "+2 GENO за клик",
+          "level": 0
+        },
+        {
+          "id": "amoeba_energy",
+          "name": "Энергия амёбы",
+          "effect": 10,
+          "cost": 3000,
+          "desc": "+10 к максимальной энергии",
+          "level": 0,
+          "type": "energy"
+        }
+      ],
+      "passive": [
+        {
+          "id": "amoeba_movement",
+          "name": "Движение амёбы",
+          "effect": 3,
+          "cost": 4000,
+          "desc": "+3 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "phagocytosis",
+          "name": "Фагоцитоз",
+          "effect": 5,
+          "cost": 6000,
+          "desc": "+5 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "cytoplasm_flow",
+          "name": "Ток цитоплазмы",
+          "effect": 8,
+          "cost": 10000,
+          "desc": "+8 GENO/мин",
+          "level": 0
+        }
+      ]
+    },
+    "2": {
+      "click": [
+        {
+          "id": "tentacle_strike",
+          "name": "Удар щупалец",
+          "effect": 5,
+          "cost": 15000,
+          "desc": "+5 GENO за клик",
+          "level": 0
+        },
+        {
+          "id": "jellyfish_energy",
+          "name": "Энергия медузы",
+          "effect": 15,
+          "cost": 20000,
+          "desc": "+15 к максимальной энергии",
+          "level": 0,
+          "type": "energy"
+        }
+      ],
+      "passive": [
+        {
+          "id": "bioluminescence",
+          "name": "Биолюминесценция",
+          "effect": 12,
+          "cost": 25000,
+          "desc": "+12 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "water_jet",
+          "name": "Водяная струя",
+          "effect": 18,
+          "cost": 35000,
+          "desc": "+18 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "nervous_net",
+          "name": "Нервная сеть",
+          "effect": 25,
+          "cost": 50000,
+          "desc": "+25 GENO/мин",
+          "level": 0
+        }
+      ]
+    },
+    "3": {
+      "click": [
+        {
+          "id": "fin_power",
+          "name": "Мощность плавников",
+          "effect": 10,
+          "cost": 100000,
+          "desc": "+10 GENO за клик",
+          "level": 0
+        },
+        {
+          "id": "fish_energy",
+          "name": "Энергия рыбы",
+          "effect": 20,
+          "cost": 120000,
+          "desc": "+20 к максимальной энергии",
+          "level": 0,
+          "type": "energy"
+        }
+      ],
+      "passive": [
+        {
+          "id": "swimming_muscles",
+          "name": "Плавательные мышцы",
+          "effect": 40,
+          "cost": 150000,
+          "desc": "+40 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "gills_efficiency",
+          "name": "Эффективность жабр",
+          "effect": 60,
+          "cost": 200000,
+          "desc": "+60 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "lateral_line",
+          "name": "Боковая линия",
+          "effect": 80,
+          "cost": 300000,
+          "desc": "+80 GENO/мин",
+          "level": 0
+        }
+      ]
+    },
+    "4": {
+      "click": [
+        {
+          "id": "claw_strength",
+          "name": "Сила когтей",
+          "effect": 20,
+          "cost": 800000,
+          "desc": "+20 GENO за клик",
+          "level": 0
+        },
+        {
+          "id": "lizard_energy",
+          "name": "Энергия ящера",
+          "effect": 25,
+          "cost": 1000000,
+          "desc": "+25 к максимальной энергии",
+          "level": 0,
+          "type": "energy"
+        }
+      ],
+      "passive": [
+        {
+          "id": "scales_protection",
+          "name": "Защита чешуи",
+          "effect": 120,
+          "cost": 1200000,
+          "desc": "+120 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "tail_balance",
+          "name": "Баланс хвоста",
+          "effect": 180,
+          "cost": 1800000,
+          "desc": "+180 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "cold_blood",
+          "name": "Холоднокровность",
+          "effect": 250,
+          "cost": 2500000,
+          "desc": "+250 GENO/мин",
+          "level": 0
+        }
+      ]
+    },
+    "5": {
+      "click": [
+        {
+          "id": "wing_beat",
+          "name": "Взмах крыльев",
+          "effect": 50,
+          "cost": 5000000,
+          "desc": "+50 GENO за клик",
+          "level": 0
+        },
+        {
+          "id": "bird_energy",
+          "name": "Энергия птицы",
+          "effect": 30,
+          "cost": 6000000,
+          "desc": "+30 к максимальной энергии",
+          "level": 0,
+          "type": "energy"
+        }
+      ],
+      "passive": [
+        {
+          "id": "flight_muscles",
+          "name": "Летательные мышцы",
+          "effect": 400,
+          "cost": 7000000,
+          "desc": "+400 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "hollow_bones",
+          "name": "Полые кости",
+          "effect": 600,
+          "cost": 10000000,
+          "desc": "+600 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "air_sacs",
+          "name": "Воздушные мешки",
+          "effect": 800,
+          "cost": 15000000,
+          "desc": "+800 GENO/мин",
+          "level": 0
+        }
+      ]
+    },
+    "6": {
+      "click": [
+        {
+          "id": "grip_strength",
+          "name": "Сила хвата",
+          "effect": 100,
+          "cost": 30000000,
+          "desc": "+100 GENO за клик",
+          "level": 0
+        },
+        {
+          "id": "monkey_energy",
+          "name": "Энергия обезьяны",
+          "effect": 35,
+          "cost": 35000000,
+          "desc": "+35 к максимальной энергии",
+          "level": 0,
+          "type": "energy"
+        }
+      ],
+      "passive": [
+        {
+          "id": "tool_use",
+          "name": "Использование орудий",
+          "effect": 1200,
+          "cost": 40000000,
+          "desc": "+1200 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "social_intelligence",
+          "name": "Социальный интеллект",
+          "effect": 1800,
+          "cost": 60000000,
+          "desc": "+1800 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "opposable_thumbs",
+          "name": "Противопоставленные пальцы",
+          "effect": 2500,
+          "cost": 80000000,
+          "desc": "+2500 GENO/мин",
+          "level": 0
+        }
+      ]
+    },
+    "7": {
+      "click": [
+        {
+          "id": "human_intelligence",
+          "name": "Человеческий интеллект",
+          "effect": 200,
+          "cost": 200000000,
+          "desc": "+200 GENO за клик",
+          "level": 0
+        },
+        {
+          "id": "human_energy",
+          "name": "Энергия человека",
+          "effect": 40,
+          "cost": 250000000,
+          "desc": "+40 к максимальной энергии",
+          "level": 0,
+          "type": "energy"
+        }
+      ],
+      "passive": [
+        {
+          "id": "language",
+          "name": "Язык",
+          "effect": 4000,
+          "cost": 300000000,
+          "desc": "+4000 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "agriculture",
+          "name": "Земледелие",
+          "effect": 6000,
+          "cost": 450000000,
+          "desc": "+6000 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "technology",
+          "name": "Технологии",
+          "effect": 8000,
+          "cost": 600000000,
+          "desc": "+8000 GENO/мин",
+          "level": 0
+        }
+      ]
+    },
+    "8": {
+      "click": [
+        {
+          "id": "cyber_enhancement",
+          "name": "Кибер-усиление",
+          "effect": 500,
+          "cost": 1500000000,
+          "desc": "+500 GENO за клик",
+          "level": 0
+        },
+        {
+          "id": "cyborg_energy",
+          "name": "Энергия киборга",
+          "effect": 50,
+          "cost": 1800000000,
+          "desc": "+50 к максимальной энергии",
+          "level": 0,
+          "type": "energy"
+        }
+      ],
+      "passive": [
+        {
+          "id": "neural_interface",
+          "name": "Нейроинтерфейс",
+          "effect": 15000,
+          "cost": 2000000000,
+          "desc": "+15000 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "artificial_organs",
+          "name": "Искусственные органы",
+          "effect": 22000,
+          "cost": 3000000000,
+          "desc": "+22000 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "quantum_processor",
+          "name": "Квантовый процессор",
+          "effect": 30000,
+          "cost": 4000000000,
+          "desc": "+30000 GENO/мин",
+          "level": 0
+        }
+      ]
+    },
+    "9": {
+      "click": [
+        {
+          "id": "alien_technology",
+          "name": "Инопланетные технологии",
+          "effect": 1000,
+          "cost": 12000000000,
+          "desc": "+1000 GENO за клик",
+          "level": 0
+        },
+        {
+          "id": "alien_energy",
+          "name": "Энергия пришельца",
+          "effect": 60,
+          "cost": 15000000000,
+          "desc": "+60 к максимальной энергии",
+          "level": 0,
+          "type": "energy"
+        }
+      ],
+      "passive": [
+        {
+          "id": "telepathy",
+          "name": "Телепатия",
+          "effect": 50000,
+          "cost": 18000000000,
+          "desc": "+50000 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "dimensional_travel",
+          "name": "Межпространственные путешествия",
+          "effect": 75000,
+          "cost": 25000000000,
+          "desc": "+75000 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "cosmic_consciousness",
+          "name": "Космическое сознание",
+          "effect": 100000,
+          "cost": 35000000000,
+          "desc": "+100000 GENO/мин",
+          "level": 0
+        }
+      ]
+    },
+    "10": {
+      "click": [
+        {
+          "id": "divine_power",
+          "name": "Божественная сила",
+          "effect": 2000,
+          "cost": 100000000000,
+          "desc": "+2000 GENO за клик",
+          "level": 0
+        },
+        {
+          "id": "god_energy",
+          "name": "Энергия бога",
+          "effect": 100,
+          "cost": 120000000000,
+          "desc": "+100 к максимальной энергии",
+          "level": 0,
+          "type": "energy"
+        }
+      ],
+      "passive": [
+        {
+          "id": "creation_power",
+          "name": "Сила творения",
+          "effect": 200000,
+          "cost": 150000000000,
+          "desc": "+200000 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "universal_control",
+          "name": "Контроль вселенной",
+          "effect": 300000,
+          "cost": 200000000000,
+          "desc": "+300000 GENO/мин",
+          "level": 0
+        },
+        {
+          "id": "genome_mastery",
+          "name": "Мастерство генома",
+          "effect": 500000,
+          "cost": 300000000000,
+          "desc": "+500000 GENO/мин",
+          "level": 0
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🧬 GENO - Эволюция Генома</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="stage-info">
+                    <div class="stage-icon">
+                        <div class="dna-spiral-small"></div>
+                    </div>
+                    <div class="stage-details">
+                        <h2 class="stage-name" id="stageName">Клетка</h2>
+                    </div>
+                </div>
+                <div class="geno-display">
+                    <div class="geno-icon">
+                        <div class="geno-glow"></div>
+                    </div>
+                    <div class="geno-value" id="genoValue">0</div>
+                    <span class="geno-label">GENO</span>
+                </div>
+            </div>
+            <div class="stage-desc" id="stageDesc">Ты — капля в океане. Но в тебе — потенциал вселенной.</div>
+        </header>
+
+        <!-- Energy Section -->
+        <section class="energy-section">
+            <div class="energy-label">Энергия</div>
+            <div class="dna-energy-container">
+                <div class="dna-energy-bar">
+                    <div class="dna-strand">
+                        <div class="base-pair" style="--delay: 0s"></div>
+                        <div class="base-pair" style="--delay: 0.1s"></div>
+                        <div class="base-pair" style="--delay: 0.2s"></div>
+                        <div class="base-pair" style="--delay: 0.3s"></div>
+                        <div class="base-pair" style="--delay: 0.4s"></div>
+                        <div class="base-pair" style="--delay: 0.5s"></div>
+                        <div class="base-pair" style="--delay: 0.6s"></div>
+                        <div class="base-pair" style="--delay: 0.7s"></div>
+                        <div class="base-pair" style="--delay: 0.8s"></div>
+                        <div class="base-pair" style="--delay: 0.9s"></div>
+                    </div>
+                    <div class="energy-fill" id="energyFill"></div>
+                    <div class="energy-text" id="energyText">100/100</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Evolution Page -->
+            <div class="page active" id="evolutionPage">
+                <div class="click-section">
+                    <div class="dna-click-container">
+                        <button class="dna-click-button" id="dnaButton">
+                            <div class="dna-helix">
+                                <div class="helix-strand strand-1"></div>
+                                <div class="helix-strand strand-2"></div>
+                                <div class="helix-connections">
+                                    <div class="connection" style="--rotation: 0deg"></div>
+                                    <div class="connection" style="--rotation: 36deg"></div>
+                                    <div class="connection" style="--rotation: 72deg"></div>
+                                    <div class="connection" style="--rotation: 108deg"></div>
+                                    <div class="connection" style="--rotation: 144deg"></div>
+                                    <div class="connection" style="--rotation: 180deg"></div>
+                                    <div class="connection" style="--rotation: 216deg"></div>
+                                    <div class="connection" style="--rotation: 252deg"></div>
+                                    <div class="connection" style="--rotation: 288deg"></div>
+                                    <div class="connection" style="--rotation: 324deg"></div>
+                                </div>
+                            </div>
+                            <div class="click-effect" id="clickEffect"></div>
+                        </button>
+                        <div class="click-info">
+                            <div class="click-power" id="clickPower">+1 GENO</div>
+                            <div class="click-label">за клик</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="evolution-info">
+                    <div class="stage-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="stageProgress"></div>
+                        </div>
+                        <div class="progress-text" id="stageProgressText">0 / 1,000 GENO</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhancement Page -->
+            <div class="page" id="enhancementPage">
+                <div class="next-stage-info" id="nextStageInfo">
+                    <h3>Следующая стадия</h3>
+                    <div class="next-stage-details">
+                        <div class="next-stage-name">Амёба</div>
+                        <div class="next-stage-desc">Ты научился двигаться. Первый шаг к чему-то большему...</div>
+                    </div>
+                </div>
+                <div class="enhancement-content">
+                    <div class="enhancement-tabs">
+                        <button class="tab-btn active" data-tab="click">
+                            <div class="tab-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                            </div>
+                            <span>Эволюция</span>
+                        </button>
+                        <button class="tab-btn" data-tab="passive">
+                            <div class="tab-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                                </svg>
+                            </div>
+                            <span>Развитие</span>
+                        </button>
+                        <button class="tab-btn" data-tab="tasks">
+                            <div class="tab-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                </svg>
+                            </div>
+                            <span>Задания</span>
+                        </button>
+                    </div>
+
+                    <div class="tab-content active" id="clickTab">
+                        <div class="upgrades-list" id="clickUpgrades"></div>
+                    </div>
+
+                    <div class="tab-content" id="passiveTab">
+                        <div class="upgrades-list" id="passiveUpgrades"></div>
+                    </div>
+
+                    <div class="tab-content" id="tasksTab">
+                        <div class="tasks-list" id="tasksList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Laboratory Page -->
+            <div class="page" id="laboratoryPage">
+                <div class="laboratory-content">
+                    <div class="laboratory-header">
+                        <h3>🧪 Лаборатория</h3>
+                        <p>Исследуй возможности генной инженерии</p>
+                        <div class="stars-display">
+                            <div class="stars-icon">⭐</div>
+                            <div class="stars-value" id="starsValue">0</div>
+                            <span class="stars-label">Telegram Stars</span>
+                            <button class="add-stars-btn" onclick="showStarsPurchase()">+</button>
+                        </div>
+                    </div>
+
+                    <div class="boosters-section">
+                        <h4>⚡ Бустеры</h4>
+                        <div class="boosters-list" id="boostersList"></div>
+                    </div>
+
+                    <div class="referral-section">
+                        <h4>🔗 Реферальная система</h4>
+                        <div class="referral-info">
+                            <div class="referral-link">
+                                <input type="text" id="referralInput" readonly>
+                                <button class="copy-btn" id="copyBtn">Копировать</button>
+                            </div>
+                            <div class="referral-stats">
+                                <div class="stat">
+                                    <span class="stat-value" id="referralCount">0</span>
+                                    <span class="stat-label">Рефералов</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-value" id="referralBonus">0</span>
+                                    <span class="stat-label">Бонус GENO</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-page="evolution">
+                <div class="nav-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                    </svg>
+                </div>
+                <span>Эволюция</span>
+            </button>
+            <button class="nav-btn" data-page="enhancement">
+                <div class="nav-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                </div>
+                <span>Развитие</span>
+            </button>
+            <button class="nav-btn" data-page="laboratory">
+                <div class="nav-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                    </svg>
+                </div>
+                <span>Лаборатория</span>
+            </button>
+        </nav>
+
+        <!-- Notification -->
+        <div class="notification" id="notification"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

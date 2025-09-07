@@ -1,0 +1,162 @@
+[
+  {
+    "id": "first_click",
+    "title": "Первый шаг",
+    "description": "Сделай свой первый клик",
+    "reward": 100,
+    "condition": "totalClicks >= 1",
+    "unlockLevel": 0
+  },
+  {
+    "id": "reach_1000_geno",
+    "title": "Первые накопления", 
+    "description": "Накопи 1000 GENO",
+    "reward": 500,
+    "condition": "geno >= 1000",
+    "unlockLevel": 1
+  },
+  {
+    "id": "buy_first_upgrade",
+    "title": "Эволюция начинается",
+    "description": "Купи первое улучшение",
+    "reward": 1000,
+    "condition": "upgrades.click.length > 0 || upgrades.passive.length > 0",
+    "unlockLevel": 2
+  },
+  {
+    "id": "reach_amoeba",
+    "title": "Первые шаги",
+    "description": "Достигни стадии Амёба",
+    "reward": 2000,
+    "condition": "stageIndex >= 1",
+    "unlockLevel": 3
+  },
+  {
+    "id": "collect_passive",
+    "title": "Пассивный доход",
+    "description": "Собери пассивный доход 5 раз",
+    "reward": 1500,
+    "condition": "passiveCollections >= 5",
+    "unlockLevel": 4
+  },
+  {
+    "id": "reach_10000_clicks",
+    "title": "Настойчивость",
+    "description": "Сделай 10000 кликов",
+    "reward": 3000,
+    "condition": "totalClicks >= 10000",
+    "unlockLevel": 5
+  },
+  {
+    "id": "reach_medusa",
+    "title": "Плавание в океане",
+    "description": "Достигни стадии Медуза",
+    "reward": 5000,
+    "condition": "stageIndex >= 2",
+    "unlockLevel": 6
+  },
+  {
+    "id": "buy_10_upgrades",
+    "title": "Коллекционер",
+    "description": "Купи 10 улучшений",
+    "reward": 4000,
+    "condition": "upgrades.click.length + upgrades.passive.length >= 10",
+    "unlockLevel": 7
+  },
+  {
+    "id": "reach_100000_geno",
+    "title": "Богатство",
+    "description": "Накопи 100000 GENO",
+    "reward": 8000,
+    "condition": "geno >= 100000",
+    "unlockLevel": 8
+  },
+  {
+    "id": "reach_fish",
+    "title": "Покорение глубин",
+    "description": "Достигни стадии Рыба",
+    "reward": 10000,
+    "condition": "stageIndex >= 3",
+    "unlockLevel": 9
+  },
+  {
+    "id": "reach_50000_clicks",
+    "title": "Мастер кликов",
+    "description": "Сделай 50000 кликов",
+    "reward": 12000,
+    "condition": "totalClicks >= 50000",
+    "unlockLevel": 10
+  },
+  {
+    "id": "reach_lizard",
+    "title": "Выход на сушу",
+    "description": "Достигни стадии Ящер",
+    "reward": 15000,
+    "condition": "stageIndex >= 4",
+    "unlockLevel": 11
+  },
+  {
+    "id": "collect_passive_20",
+    "title": "Пассивный мастер",
+    "description": "Собери пассивный доход 20 раз",
+    "reward": 10000,
+    "condition": "passiveCollections >= 20",
+    "unlockLevel": 12
+  },
+  {
+    "id": "reach_1000000_geno",
+    "title": "Миллионер",
+    "description": "Накопи 1000000 GENO",
+    "reward": 20000,
+    "condition": "geno >= 1000000",
+    "unlockLevel": 13
+  },
+  {
+    "id": "reach_bird",
+    "title": "Покорение неба",
+    "description": "Достигни стадии Птица",
+    "reward": 25000,
+    "condition": "stageIndex >= 5",
+    "unlockLevel": 14
+  },
+  {
+    "id": "buy_50_upgrades",
+    "title": "Великий коллекционер",
+    "description": "Купи 50 улучшений",
+    "reward": 18000,
+    "condition": "upgrades.click.length + upgrades.passive.length >= 50",
+    "unlockLevel": 15
+  },
+  {
+    "id": "reach_100000_clicks",
+    "title": "Легенда кликов",
+    "description": "Сделай 100000 кликов",
+    "reward": 30000,
+    "condition": "totalClicks >= 100000",
+    "unlockLevel": 16
+  },
+  {
+    "id": "reach_monkey",
+    "title": "Инструменты и разум",
+    "description": "Достигни стадии Обезьяна",
+    "reward": 40000,
+    "condition": "stageIndex >= 6",
+    "unlockLevel": 17
+  },
+  {
+    "id": "reach_10000000_geno",
+    "title": "Десятимиллионер",
+    "description": "Накопи 10000000 GENO",
+    "reward": 50000,
+    "condition": "geno >= 10000000",
+    "unlockLevel": 18
+  },
+  {
+    "id": "reach_human",
+    "title": "Цивилизация",
+    "description": "Достигни стадии Человек",
+    "reward": 75000,
+    "condition": "stageIndex >= 7",
+    "unlockLevel": 19
+  }
+]

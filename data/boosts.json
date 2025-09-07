@@ -1,0 +1,99 @@
+{
+  "boosts": [
+    {
+      "id": "passive_12h",
+      "name": "Генетический ускоритель",
+      "duration": 12,
+      "basePrice": 100,
+      "description": "Пассивный доход не останавливается 12 часов",
+      "currency": "stars"
+    },
+    {
+      "id": "passive_24h", 
+      "name": "Клеточный стабилизатор",
+      "duration": 24,
+      "basePrice": 200,
+      "description": "Пассивный доход не останавливается 24 часа",
+      "currency": "stars"
+    },
+    {
+      "id": "passive_48h",
+      "name": "ДНК консервант",
+      "duration": 48, 
+      "basePrice": 400,
+      "description": "Пассивный доход не останавливается 48 часов",
+      "currency": "stars"
+    },
+    {
+      "id": "passive_72h",
+      "name": "Бессмертный ген",
+      "duration": 72,
+      "basePrice": 600,
+      "description": "Пассивный доход не останавливается 72 часа",
+      "currency": "stars"
+    },
+    {
+      "id": "energy_boost_1h",
+      "name": "Энергетический импульс",
+      "duration": 1,
+      "basePrice": 50,
+      "description": "Энергия восстанавливается в 2 раза быстрее 1 час",
+      "currency": "stars"
+    },
+    {
+      "id": "energy_boost_6h",
+      "name": "Клеточный генератор",
+      "duration": 6,
+      "basePrice": 150,
+      "description": "Энергия восстанавливается в 2 раза быстрее 6 часов",
+      "currency": "stars"
+    },
+    {
+      "id": "click_boost_1h",
+      "name": "Генетический усилитель",
+      "duration": 1,
+      "basePrice": 75,
+      "description": "Клик-сила увеличена в 2 раза на 1 час",
+      "currency": "stars"
+    },
+    {
+      "id": "click_boost_6h",
+      "name": "Молекулярный катализатор",
+      "duration": 6,
+      "basePrice": 200,
+      "description": "Клик-сила увеличена в 2 раза на 6 часов",
+      "currency": "stars"
+    },
+    {
+      "id": "passive_boost_1h",
+      "name": "Метаболический ускоритель",
+      "duration": 1,
+      "basePrice": 100,
+      "description": "Пассивный доход увеличен в 2 раза на 1 час",
+      "currency": "stars"
+    },
+    {
+      "id": "passive_boost_6h",
+      "name": "Биохимический реактор",
+      "duration": 6,
+      "basePrice": 250,
+      "description": "Пассивный доход увеличен в 2 раза на 6 часов",
+      "currency": "stars"
+    },
+    {
+      "id": "energy_refill",
+      "name": "Полное восстановление энергии",
+      "duration": 0,
+      "basePrice": 1,
+      "description": "Мгновенно восстанавливает всю энергию",
+      "currency": "stars"
+    }
+  ],
+  "discounts": {
+    "enabled": true,
+    "chance": 0.15,
+    "minDiscount": 0.2,
+    "maxDiscount": 0.5,
+    "duration": 24
+  }
+}
