@@ -79,9 +79,9 @@ function initTelegramWebApp() {
         isTelegramWebApp = true;
         telegramUserId = window.Telegram.WebApp.initDataUnsafe?.user?.id;
         
-        // Set correct player ID for Telegram Web App
+        // Set correct player ID for Telegram Web App (just use telegramUserId)
         if (telegramUserId) {
-            gameState.id = `TG-${telegramUserId}`;
+            gameState.id = telegramUserId.toString();
         }
         
         // Initialize Web App
@@ -96,8 +96,8 @@ function initTelegramWebApp() {
         return true;
     } else {
         isTelegramWebApp = false;
-        // Set fallback ID for testing
-        gameState.id = `GENO-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+        // Set fallback ID for testing (simple number)
+        gameState.id = Math.floor(Math.random() * 1000000).toString();
         return false;
     }
 }
