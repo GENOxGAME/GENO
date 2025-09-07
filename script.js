@@ -424,6 +424,7 @@ function handleClick() {
     updateDisplay();
     checkStageEvolution();
     saveGame();
+    sendChangesToBackend();
 }
 
 function buyUpgrade(upgrade, type, stageId) {
@@ -457,6 +458,7 @@ function buyUpgrade(upgrade, type, stageId) {
     generateUpgrades();
     showNotification(`Куплено: ${upgrade.name} (Ур. ${currentLevel + 1})`);
     saveGame();
+    sendChangesToBackend();
 }
 
 function checkTasks() {
@@ -884,18 +886,42 @@ function gameLoop() {
 }
 
 // Save/Load Game
-function saveGame() {
+async function saveGame() {
     if (isInTelegramWebApp()) {
-        // Save to Telegram Cloud Storage
-        window.Telegram.WebApp.CloudStorage.setItem('genoPlayer', JSON.stringify(gameState), (error) => {
-            if (error) {
-                console.error('Error saving to Telegram Cloud:', error);
-                // Fallback to localStorage
-                localStorage.setItem('genoPlayer', JSON.stringify(gameState));
+        // Save to backend via API
+        try {
+            const response = await fetch(`${backendUrl}/api/update-player/${gameState.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(gameState)
+            });
+            
+            if (response.ok) {
+                console.log('Game saved to backend');
             } else {
-                console.log('Game saved to Telegram Cloud Storage');
+                console.error('Error saving to backend:', response.status);
+                // Fallback to Telegram Cloud Storage
+                window.Telegram.WebApp.CloudStorage.setItem('genoPlayer', JSON.stringify(gameState), (error) => {
+                    if (error) {
+                        console.error('Error saving to Telegram Cloud Storage:', error);
+                    } else {
+                        console.log('Game saved to Telegram Cloud Storage (fallback)');
+                    }
+                });
             }
-        });
+        } catch (error) {
+            console.error('Error saving to backend:', error);
+            // Fallback to Telegram Cloud Storage
+            window.Telegram.WebApp.CloudStorage.setItem('genoPlayer', JSON.stringify(gameState), (error) => {
+                if (error) {
+                    console.error('Error saving to Telegram Cloud Storage:', error);
+                } else {
+                    console.log('Game saved to Telegram Cloud Storage (fallback)');
+                }
+            });
+        }
         
         // Also ping backend to keep it alive
         pingBackend();
@@ -906,9 +932,26 @@ function saveGame() {
     }
 }
 
-function loadGame() {
+async function loadGame() {
     if (isInTelegramWebApp()) {
-        // Load from Telegram Cloud Storage
+        // Try to load from backend first
+        try {
+            const response = await fetch(`${backendUrl}/api/player-data/${gameState.id}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.player) {
+                    gameState = { ...gameState, ...data.player };
+                    console.log('Game loaded from backend');
+                    checkReferral();
+                    updateDisplay();
+                    return;
+                }
+            }
+        } catch (error) {
+            console.log('Backend not available, trying Telegram Cloud Storage');
+        }
+        
+        // Fallback to Telegram Cloud Storage
         window.Telegram.WebApp.CloudStorage.getItem('genoPlayer', (error, result) => {
             if (!error && result) {
                 const savedData = JSON.parse(result);
@@ -1206,13 +1249,36 @@ async function submitToLeaderboard() {
     }
 }
 
+// Функция для отправки изменений в backend (вызывается при каждом изменении)
+async function sendChangesToBackend() {
+    if (!isInTelegramWebApp()) return;
+    
+    try {
+        const response = await fetch(`${backendUrl}/api/update-player/${gameState.id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(gameState)
+        });
+        
+        if (response.ok) {
+            console.log('Changes sent to backend');
+        } else {
+            console.error('Error sending changes to backend:', response.status);
+        }
+    } catch (error) {
+        console.error('Error sending changes to backend:', error);
+    }
+}
+
 // Initialize Game
-function initGame() {
+async function initGame() {
     // Initialize Telegram Web App first
     initTelegramWebApp();
     
     // Load game data
-    loadGame();
+    await loadGame();
     
     // Event Listeners
     document.getElementById('dnaButton').addEventListener('click', handleClick);
