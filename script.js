@@ -1,6 +1,6 @@
 // Game State
 let gameState = {
-    id: `GENO-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
+    id: null, // Will be set based on environment
     geno: 0,
     energy: 100,
     maxEnergy: 100,
@@ -79,6 +79,11 @@ function initTelegramWebApp() {
         isTelegramWebApp = true;
         telegramUserId = window.Telegram.WebApp.initDataUnsafe?.user?.id;
         
+        // Set correct player ID for Telegram Web App
+        if (telegramUserId) {
+            gameState.id = `TG-${telegramUserId}`;
+        }
+        
         // Initialize Web App
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
@@ -91,6 +96,8 @@ function initTelegramWebApp() {
         return true;
     } else {
         isTelegramWebApp = false;
+        // Set fallback ID for testing
+        gameState.id = `GENO-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
         return false;
     }
 }
@@ -978,10 +985,7 @@ async function loadGame() {
                 console.log('Game loaded from Telegram Cloud Storage');
             } else {
                 console.log('No saved data found, creating new player');
-                // Create new player with Telegram user ID
-                if (telegramUserId) {
-                    gameState.id = `TG-${telegramUserId}`;
-                }
+                // ID is already set in initTelegramWebApp()
             }
             
             // Check for referral after loading
