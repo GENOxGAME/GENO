@@ -29,9 +29,49 @@ let gameState = {
 // Telegram Web App Integration
 let isTelegramWebApp = false;
 let telegramUserId = null;
+let botUsername = null;
 
 // Backend configuration
 const backendUrl = 'https://server-ebpy.onrender.com';
+
+// Notify backend about app launch
+function notifyBackendAppLaunch() {
+    if (isInTelegramWebApp()) {
+        const initData = window.Telegram.WebApp.initData;
+        const user = window.Telegram.WebApp.initDataUnsafe?.user;
+        
+        fetch(`${backendUrl}/api/app-launch`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                initData: initData,
+                user: user,
+                timestamp: Date.now(),
+                platform: 'telegram_web_app'
+            })
+        }).catch(error => {
+            // Silent fail for app launch notification
+        });
+    }
+}
+
+// Get bot username from backend
+async function getBotUsername() {
+    try {
+        const response = await fetch(`${backendUrl}/api/bot-info`);
+        const data = await response.json();
+        
+        if (data.success && data.bot && data.bot.username) {
+            botUsername = data.bot.username;
+            return botUsername;
+        }
+    } catch (error) {
+        // Silent fail, will use fallback
+    }
+    return null;
+}
 
 // Initialize Telegram Web App
 function initTelegramWebApp() {
@@ -43,12 +83,16 @@ function initTelegramWebApp() {
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
         
-        console.log('Telegram Web App initialized');
-        console.log('User ID:', telegramUserId);
+        // Get bot username and notify backend about app launch
+        getBotUsername().then(() => {
+            notifyBackendAppLaunch();
+        });
         
         return true;
+    } else {
+        isTelegramWebApp = false;
+        return false;
     }
-    return false;
 }
 
 // Check if running in Telegram Web App
@@ -387,13 +431,6 @@ function buyUpgrade(upgrade, type, stageId) {
         (gameState.upgrades[type][stageId][upgrade.id] || 0) : 0;
     const cost = Math.floor(upgrade.cost * Math.pow(2, currentLevel));
     
-    console.log('buyUpgrade called:', {
-        upgrade: upgrade.name,
-        currentLevel,
-        cost,
-        currentGeno: gameState.geno,
-        canAfford: gameState.geno >= cost
-    });
     
     if (gameState.geno < cost) {
         showNotification(`Недостаточно GENO! Нужно: ${formatNumber(cost)}, есть: ${formatNumber(gameState.geno)}`);
@@ -401,7 +438,6 @@ function buyUpgrade(upgrade, type, stageId) {
     }
     
     gameState.geno -= cost;
-    console.log('GENO after purchase:', gameState.geno);
     
     // Initialize stage upgrades if not exists
     if (!gameState.upgrades[type][stageId]) {
@@ -763,6 +799,8 @@ function switchPage(page) {
     } else if (page === 'laboratory') {
         generateBoosters();
         updateReferralInfo();
+    } else if (page === 'leaderboard') {
+        loadLeaderboard();
     }
 }
 
@@ -838,6 +876,11 @@ function gameLoop() {
     
     updateDisplay();
     saveGame();
+    
+    // Submit to leaderboard every 30 seconds
+    if (Math.floor(now / 1000) % 30 === 0) {
+        submitToLeaderboard();
+    }
 }
 
 // Save/Load Game
@@ -912,9 +955,12 @@ function checkReferral() {
 function getReferralLink() {
     if (isInTelegramWebApp()) {
         // Generate referral link for Telegram bot
-        const botUsername = 'your_bot_username'; // Replace with actual bot username
-        const referralUrl = `https://t.me/${botUsername}?start=ref_${gameState.id}`;
-        return referralUrl;
+        if (botUsername) {
+            return `https://t.me/${botUsername}?start=ref_${gameState.id}`;
+        } else {
+            // Fallback if bot username not loaded yet
+            return `https://t.me/genogame_bot?start=ref_${gameState.id}`;
+        }
     } else {
         // Fallback for testing
         return `${window.location.origin}${window.location.pathname}?ref=${gameState.id}`;
@@ -1050,6 +1096,113 @@ function purchaseStars(amount) {
         });
     } else {
         showNotification('Пополнение доступно только в Telegram!');
+    }
+}
+
+// Leaderboard functions
+async function loadLeaderboard() {
+    const leaderboardList = document.getElementById('leaderboardList');
+    const userRankElement = document.getElementById('userRank');
+    const totalPlayersElement = document.getElementById('totalPlayers');
+    
+    // Show loading state
+    leaderboardList.innerHTML = `
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Загрузка рейтинга...</p>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch(`${backendUrl}/api/leaderboard?userId=${gameState.id}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch leaderboard');
+        }
+        
+        const data = await response.json();
+        const leaderboard = data.leaderboard || [];
+        const userRank = data.userRank || null;
+        const totalPlayers = data.totalPlayers || 0;
+        
+        // Update stats
+        userRankElement.textContent = userRank ? `#${userRank}` : '-';
+        totalPlayersElement.textContent = totalPlayers;
+        
+        // Display leaderboard
+        if (leaderboard.length === 0) {
+            leaderboardList.innerHTML = `
+                <div class="leaderboard-error">
+                    <h4>Рейтинг пуст</h4>
+                    <p>Пока никто не играет. Станьте первым!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        leaderboardList.innerHTML = leaderboard.map((player, index) => {
+            const isCurrentUser = player.id === gameState.id;
+            const rank = index + 1;
+            const rankClass = rank <= 3 ? `rank-${rank}` : '';
+            
+            return `
+                <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}">
+                    <div class="leaderboard-rank ${rankClass}">${rank}</div>
+                    <div class="leaderboard-player">
+                        <div class="leaderboard-name">${player.name || 'Аноним'}</div>
+                        <div class="leaderboard-stage">${player.stage || 'Клетка'}</div>
+                    </div>
+                    <div class="leaderboard-score">
+                        ${formatNumber(player.geno || 0)}
+                        <div class="leaderboard-score-label">GENO</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        leaderboardList.innerHTML = `
+            <div class="leaderboard-error">
+                <h4>Ошибка загрузки</h4>
+                <p>Не удалось загрузить рейтинг</p>
+                <button class="leaderboard-refresh" onclick="loadLeaderboard()">Попробовать снова</button>
+            </div>
+        `;
+    }
+}
+
+// Submit player data to leaderboard
+async function submitToLeaderboard() {
+    if (!isInTelegramWebApp()) return;
+    
+    try {
+        const user = window.Telegram.WebApp.initDataUnsafe?.user;
+        const playerData = {
+            id: gameState.id,
+            name: user?.first_name || 'Аноним',
+            username: user?.username || null,
+            geno: gameState.geno,
+            stage: stages[gameState.stageIndex]?.name || 'Клетка',
+            stageIndex: gameState.stageIndex,
+            totalClicks: gameState.totalClicks,
+            totalGenoEarned: gameState.totalGenoEarned,
+            lastActive: Date.now()
+        };
+        
+        await fetch(`${backendUrl}/api/leaderboard/submit`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(playerData)
+        });
+    } catch (error) {
+        // Silent fail - leaderboard is not critical
     }
 }
 
