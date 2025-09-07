@@ -901,6 +901,11 @@ function gameLoop() {
         sendChangesToBackend();
     }
     
+    // Sync data from backend every 30 seconds
+    if (Math.floor(now / 1000) % 30 === 0) {
+        syncFromBackend();
+    }
+    
     // Submit to leaderboard every 30 seconds
     if (Math.floor(now / 1000) % 30 === 0) {
         submitToLeaderboard();
@@ -962,10 +967,38 @@ async function loadGame() {
             if (response.ok) {
                 const data = await response.json();
                 if (data.success && data.player) {
-                    gameState = { ...gameState, ...data.player };
-                    // Reset energy recovery timer to prevent instant energy recovery
-                    gameState.lastEnergyRecovery = Date.now();
-                    console.log('Game loaded from backend');
+                    // ✅ ПОЛНОСТЬЮ заменяем gameState данными из backend
+                    const backendData = data.player;
+                    
+                    // Сохраняем только ID и настройки, которые не должны изменяться
+                    const preservedId = gameState.id;
+                    
+                    // Полностью заменяем gameState данными из backend
+                    gameState = {
+                        id: preservedId,
+                        geno: backendData.geno || 0,
+                        energy: backendData.energy || 100,
+                        maxEnergy: backendData.max_energy || 100,
+                        lastEnergyRecovery: backendData.last_energy_recovery ? new Date(backendData.last_energy_recovery).getTime() : Date.now(),
+                        stageIndex: backendData.stage_index || 0,
+                        upgrades: backendData.upgrades || { click: {}, passive: {} },
+                        lastActiveTime: Date.now(),
+                        lastPassiveGenTime: Date.now(),
+                        lastPassiveCollection: backendData.last_passive_collection ? new Date(backendData.last_passive_collection).getTime() : Date.now(),
+                        passiveAccumulated: backendData.passive_accumulated || 0,
+                        passiveCollections: 0,
+                        activeBoosters: backendData.active_boosters || {},
+                        completedTasks: backendData.completed_tasks || [],
+                        referredBy: null,
+                        referrals: [],
+                        lastAirdrop: 0,
+                        totalClicks: backendData.total_clicks || 0,
+                        totalGenoEarned: backendData.total_geno_earned || 0,
+                        telegramStars: backendData.telegram_stars || 0,
+                        version: "1.0.0"
+                    };
+                    
+                    console.log('Game loaded from backend - data synchronized');
                     checkReferral();
                     updateDisplay();
                     return;
@@ -1321,6 +1354,53 @@ async function sendChangesToBackend() {
     }
 }
 
+// Функция для синхронизации данных из backend
+async function syncFromBackend() {
+    if (!isInTelegramWebApp() || !gameState.id) return;
+    
+    try {
+        const response = await fetch(`${backendUrl}/api/player-data/${gameState.id}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.player) {
+                const backendData = data.player;
+                
+                // Проверяем, изменились ли критические данные
+                const energyChanged = backendData.energy !== gameState.energy;
+                const maxEnergyChanged = backendData.max_energy !== gameState.maxEnergy;
+                const genoChanged = backendData.geno !== gameState.geno;
+                
+                if (energyChanged || maxEnergyChanged || genoChanged) {
+                    console.log('Backend data changed, syncing...');
+                    
+                    // Обновляем только измененные поля
+                    if (energyChanged) {
+                        gameState.energy = backendData.energy;
+                        console.log(`Energy synced: ${gameState.energy}`);
+                    }
+                    if (maxEnergyChanged) {
+                        gameState.maxEnergy = backendData.max_energy;
+                        console.log(`Max energy synced: ${gameState.maxEnergy}`);
+                    }
+                    if (genoChanged) {
+                        gameState.geno = backendData.geno;
+                        console.log(`GENO synced: ${gameState.geno}`);
+                    }
+                    
+                    // Обновляем время восстановления энергии
+                    if (backendData.last_energy_recovery) {
+                        gameState.lastEnergyRecovery = new Date(backendData.last_energy_recovery).getTime();
+                    }
+                    
+                    updateDisplay();
+                }
+            }
+        }
+    } catch (error) {
+        // Silent fail - sync is not critical
+    }
+}
+
 // Initialize Game
 async function initGame() {
     // Initialize Telegram Web App first
@@ -1389,6 +1469,44 @@ async function initGame() {
         console.log('User data:', window.Telegram?.WebApp?.initDataUnsafe?.user);
         console.log('Game state ID:', gameState.id);
         console.log('Telegram user ID:', telegramUserId);
+    };
+    
+    window.syncFromBackend = async function() {
+        console.log('=== Forcing sync from backend ===');
+        if (!gameState.id) {
+            console.error('No player ID available');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${backendUrl}/api/player-data/${gameState.id}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.player) {
+                    console.log('Backend data:', data.player);
+                    
+                    // Update energy specifically
+                    const backendEnergy = data.player.energy;
+                    const backendMaxEnergy = data.player.max_energy;
+                    const backendLastRecovery = data.player.last_energy_recovery;
+                    
+                    console.log(`Backend energy: ${backendEnergy}/${backendMaxEnergy}`);
+                    console.log(`Frontend energy: ${gameState.energy}/${gameState.maxEnergy}`);
+                    console.log(`Backend last recovery: ${backendLastRecovery}`);
+                    console.log(`Frontend last recovery: ${new Date(gameState.lastEnergyRecovery)}`);
+                    
+                    // Force reload from backend
+                    await loadGame();
+                    console.log('Data synced from backend');
+                } else {
+                    console.log('No player data found in backend');
+                }
+            } else {
+                console.error('Failed to fetch from backend:', response.status);
+            }
+        } catch (error) {
+            console.error('Error syncing from backend:', error);
+        }
     };
     
     // Show welcome message
