@@ -1,4 +1,4 @@
-// Game State
+// Game State - NO LOCAL STORAGE, ALL DATA FROM BACKEND
 let gameState = {
     id: null, // Will be set based on environment
     geno: 0,
@@ -26,51 +26,113 @@ let gameState = {
     version: "1.0.0"
 };
 
+// Server-Sent Events connection
+let sseConnection = null;
+
 // Telegram Web App Integration
 let isTelegramWebApp = false;
 let telegramUserId = null;
-let botUsername = null;
 
 // Backend configuration
 const backendUrl = 'https://server-ebpy.onrender.com';
+const botUsername = 'geno_game_bot';
 
-// Notify backend about app launch
-function notifyBackendAppLaunch() {
-    if (isInTelegramWebApp()) {
-        const initData = window.Telegram.WebApp.initData;
-        const user = window.Telegram.WebApp.initDataUnsafe?.user;
+// Batch sending configuration
+let pendingChanges = new Set(); // Track which fields have changed
+let lastSyncTime = 0;
+
+// Track changes for batch sending
+function markAsChanged(field) {
+    pendingChanges.add(field);
+}
+
+// Server-Sent Events functions
+function connectSSE() {
+    if (!gameState.id || sseConnection) return;
+    
+    try {
+        sseConnection = new EventSource(`${backendUrl}/api/player-events/${gameState.id}`);
         
-        fetch(`${backendUrl}/api/app-launch`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                initData: initData,
-                user: user,
-                timestamp: Date.now(),
-                platform: 'telegram_web_app'
-            })
-        }).catch(error => {
-            // Silent fail for app launch notification
-        });
+        sseConnection.onopen = function(event) {
+            console.log('🔗 SSE connection established');
+        };
+        
+        sseConnection.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'update') {
+                    // Apply updates from server
+                    Object.keys(data.data).forEach(field => {
+                        if (gameState.hasOwnProperty(field)) {
+                            gameState[field] = data.data[field];
+                        }
+                    });
+                    
+                    // Update UI
+                    updateUI();
+                    console.log('📡 Received real-time update from server');
+                } else if (data.type === 'heartbeat') {
+                    console.log('💓 SSE heartbeat received');
+                }
+            } catch (error) {
+                console.error('Error parsing SSE data:', error);
+            }
+        };
+        
+        sseConnection.onerror = function(event) {
+            console.error('SSE connection error:', event);
+            // Attempt to reconnect after 5 seconds
+            setTimeout(() => {
+                if (sseConnection) {
+                    sseConnection.close();
+                    sseConnection = null;
+                    connectSSE();
+                }
+            }, 5000);
+        };
+        
+    } catch (error) {
+        console.error('Error establishing SSE connection:', error);
     }
 }
 
-// Get bot username from backend
-async function getBotUsername() {
+function disconnectSSE() {
+    if (sseConnection) {
+        sseConnection.close();
+        sseConnection = null;
+        console.log('🔌 SSE connection closed');
+    }
+}
+
+// Load player data from backend
+async function loadPlayerFromBackend() {
+    if (!gameState.id) return;
+    
     try {
-        const response = await fetch(`${backendUrl}/api/bot-info`);
-        const data = await response.json();
-        
-        if (data.success && data.bot && data.bot.username) {
-            botUsername = data.bot.username;
-            return botUsername;
+        const response = await fetch(`${backendUrl}/api/player-data/${gameState.id}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.player) {
+                // Update game state with backend data
+                Object.keys(data.player).forEach(key => {
+                    if (gameState.hasOwnProperty(key)) {
+                        gameState[key] = data.player[key];
+                    }
+                });
+                
+                // Update UI
+                updateUI();
+                console.log('✅ Player data loaded from backend');
+            } else {
+                console.log('📝 No existing player data, starting fresh');
+            }
+        } else {
+            console.error('Failed to load player data:', response.status);
         }
     } catch (error) {
-        // Silent fail, will use fallback
+        console.error('Error loading player data:', error);
     }
-    return null;
 }
 
 // Initialize Telegram Web App
@@ -88,9 +150,9 @@ function initTelegramWebApp() {
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
         
-        // Get bot username and notify backend about app launch
-        getBotUsername().then(() => {
-            notifyBackendAppLaunch();
+        // Load player data from backend and connect SSE
+        loadPlayerFromBackend().then(() => {
+            connectSSE();
         });
         
         return true;
@@ -98,6 +160,12 @@ function initTelegramWebApp() {
         isTelegramWebApp = false;
         // Set fallback ID for testing (simple number)
         gameState.id = Math.floor(Math.random() * 1000000).toString();
+        
+        // Load player data from backend and connect SSE for testing
+        loadPlayerFromBackend().then(() => {
+            connectSSE();
+        });
+        
         return false;
     }
 }
@@ -421,6 +489,13 @@ function handleClick() {
     gameState.totalGenoEarned += power;
     gameState.lastActiveTime = Date.now();
     
+    // Mark changed fields
+    markAsChanged('geno');
+    markAsChanged('energy');
+    markAsChanged('totalClicks');
+    markAsChanged('totalGenoEarned');
+    markAsChanged('lastActiveTime');
+    
     // Visual effect
     const clickEffect = document.getElementById('clickEffect');
     clickEffect.classList.add('active');
@@ -431,7 +506,6 @@ function handleClick() {
     updateDisplay();
     checkStageEvolution();
     saveGame();
-    sendChangesToBackend();
 }
 
 function buyUpgrade(upgrade, type, stageId) {
@@ -459,13 +533,18 @@ function buyUpgrade(upgrade, type, stageId) {
     if (upgrade.type === "energy") {
         gameState.maxEnergy += upgrade.effect;
         gameState.energy = Math.min(gameState.energy + upgrade.effect, gameState.maxEnergy);
+        markAsChanged('maxEnergy');
+        markAsChanged('energy');
     }
+    
+    // Mark changed fields
+    markAsChanged('geno');
+    markAsChanged('upgrades');
     
     updateDisplay();
     generateUpgrades();
     showNotification(`Куплено: ${upgrade.name} (Ур. ${currentLevel + 1})`);
     saveGame();
-    sendChangesToBackend();
 }
 
 function checkTasks() {
@@ -493,6 +572,11 @@ function completeTask(task) {
     gameState.completedTasks.push(task.id);
     gameState.totalGenoEarned += task.reward;
     
+    // Mark changed fields
+    markAsChanged('geno');
+    markAsChanged('completedTasks');
+    markAsChanged('totalGenoEarned');
+    
     updateDisplay();
     generateTasks();
     showNotification(`Задание выполнено: ${task.title} (+${task.reward} GENO)`);
@@ -519,13 +603,20 @@ function buyBooster(booster) {
             // Полное восстановление энергии
             gameState.energy = gameState.maxEnergy;
             gameState.lastEnergyRecovery = Date.now(); // Reset recovery timer
+            markAsChanged('energy');
+            markAsChanged('lastEnergyRecovery');
             showNotification(`Энергия полностью восстановлена! (${gameState.maxEnergy})`);
         }
     } else {
         // Handle timed boosters
         gameState.activeBoosters[booster.id] = Date.now() + booster.duration;
+        markAsChanged('activeBoosters');
         showNotification(`Активирован: ${booster.name}`);
     }
+    
+    // Mark changed fields
+    markAsChanged('geno');
+    markAsChanged('telegramStars');
     
     updateDisplay();
     generateBoosters();
@@ -810,7 +901,13 @@ function switchPage(page) {
         generateBoosters();
         updateReferralInfo();
     } else if (page === 'leaderboard') {
-        loadLeaderboard();
+        // Leaderboard removed - show placeholder
+        document.getElementById('leaderboardList').innerHTML = `
+            <div class="leaderboard-error">
+                <h4>Лидерборд недоступен</h4>
+                <p>Локальная версия игры</p>
+            </div>
+        `;
     }
 }
 
@@ -858,8 +955,10 @@ function gameLoop() {
             // Always update lastEnergyRecovery when we process energy recovery
             gameState.lastEnergyRecovery = now;
             
-            // Debug log for energy recovery
+            // Mark energy as changed if it actually changed
             if (gameState.energy !== oldEnergy) {
+                markAsChanged('energy');
+                markAsChanged('lastEnergyRecovery');
                 console.log(`Energy recovered: ${oldEnergy} -> ${gameState.energy} (+${energyToAdd})`);
             }
         }
@@ -873,6 +972,8 @@ function gameLoop() {
             const passiveEarned = Math.floor(passivePerMinute * minutesPassed);
             gameState.passiveAccumulated += passiveEarned;
             gameState.lastPassiveGenTime = now;
+            markAsChanged('passiveAccumulated');
+            markAsChanged('lastPassiveGenTime');
         }
     }
     
@@ -896,84 +997,179 @@ function gameLoop() {
     updateDisplay();
     saveGame();
     
-    // Send data to backend every 5 seconds
+    // Send batch changes and sync from backend every 5 seconds
     if (Math.floor(now / 1000) % 5 === 0) {
-        sendChangesToBackend();
-    }
-    
-    // Sync data from backend every 30 seconds
-    if (Math.floor(now / 1000) % 30 === 0) {
-        syncFromBackend();
-    }
-    
-    // Submit to leaderboard every 30 seconds
-    if (Math.floor(now / 1000) % 30 === 0) {
-        submitToLeaderboard();
+        sendChangesToBackend(); // Send accumulated changes
+        syncFromBackend(); // Get latest data from backend
     }
 }
 
 // Save/Load Game
 async function saveGame() {
-    if (isInTelegramWebApp()) {
-        // Save to backend via API
-        try {
-            const response = await fetch(`${backendUrl}/api/update-player/${gameState.id}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(gameState)
-            });
-            
-            if (response.ok) {
-                console.log('Game saved to backend');
-            } else {
-                console.error('Error saving to backend:', response.status);
-                // Fallback to Telegram Cloud Storage
-                window.Telegram.WebApp.CloudStorage.setItem('genoPlayer', JSON.stringify(gameState), (error) => {
-                    if (error) {
-                        console.error('Error saving to Telegram Cloud Storage:', error);
-                    } else {
-                        console.log('Game saved to Telegram Cloud Storage (fallback)');
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Error saving to backend:', error);
-            // Fallback to Telegram Cloud Storage
-            window.Telegram.WebApp.CloudStorage.setItem('genoPlayer', JSON.stringify(gameState), (error) => {
-                if (error) {
-                    console.error('Error saving to Telegram Cloud Storage:', error);
-                } else {
-                    console.log('Game saved to Telegram Cloud Storage (fallback)');
-                }
-            });
-        }
+    if (!gameState.id) return;
+    
+    try {
+        const response = await fetch(`${backendUrl}/api/update-player/${gameState.id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(gameState)
+        });
         
-        // Also ping backend to keep it alive
-        pingBackend();
-    } else {
-        // Fallback to localStorage for testing
-        localStorage.setItem('genoPlayer', JSON.stringify(gameState));
-        console.log('Game saved to localStorage (testing mode)');
+        if (response.ok) {
+            console.log('Game saved to backend');
+        } else {
+            console.error('Error saving to backend:', response.status);
+        }
+    } catch (error) {
+        console.error('Error saving to backend:', error);
     }
 }
 
 async function loadGame() {
+    if (!gameState.id) {
+        console.log('No player ID, creating new player');
+        checkReferral();
+        updateDisplay();
+        return;
+    }
+    
+    // Use the centralized loadPlayerFromBackend function
+    await loadPlayerFromBackend();
+    checkReferral();
+    updateDisplay();
+}
+
+function checkReferral() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const refId = urlParams.get('ref');
+    if (refId && refId !== gameState.id && !gameState.referredBy) {
+        gameState.referredBy = refId;
+        gameState.geno += 1000; // Referral bonus
+        markAsChanged('referredBy');
+        markAsChanged('geno');
+        showNotification('Бонус за приглашение: +1000 GENO!');
+        saveGame();
+    }
+}
+
+function getReferralLink() {
     if (isInTelegramWebApp()) {
-        // Try to load from backend first
-        try {
-            const response = await fetch(`${backendUrl}/api/player-data/${gameState.id}`);
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.player) {
-                    // ✅ ПОЛНОСТЬЮ заменяем gameState данными из backend
-                    const backendData = data.player;
-                    
-                    // Сохраняем только ID и настройки, которые не должны изменяться
-                    const preservedId = gameState.id;
+        // Generate referral link for Telegram bot
+        return `https://t.me/${botUsername}?start=ref_${gameState.id}`;
+    } else {
+        // Fallback for testing
+        return `${window.location.origin}${window.location.pathname}?ref=${gameState.id}`;
+    }
+}
+
+function shareReferralLink() {
+    const referralLink = getReferralLink();
+    
+    if (isInTelegramWebApp()) {
+        // Use Telegram Web App sharing
+        window.Telegram.WebApp.openTelegramLink(referralLink);
+    } else {
+        // Fallback for testing - copy to clipboard
+        navigator.clipboard.writeText(referralLink).then(() => {
+            showNotification('Реферальная ссылка скопирована в буфер обмена!');
+        }).catch(() => {
+            showNotification('Реферальная ссылка: ' + referralLink);
+        });
+    }
+}
+
+
+// Backend functions removed - local game only
+
+// Telegram Stars management
+function addTelegramStars(amount) {
+    gameState.telegramStars += amount;
+    markAsChanged('telegramStars');
+    updateDisplay();
+    showNotification(`Получено ${amount} ⭐ Telegram Stars!`);
+    saveGame();
+}
+
+function spendTelegramStars(amount) {
+    if (gameState.telegramStars >= amount) {
+        gameState.telegramStars -= amount;
+        markAsChanged('telegramStars');
+        updateDisplay();
+        saveGame();
+        return true;
+    }
+    return false;
+}
+
+// Telegram Stars purchase removed - local game only
+
+// Backend synchronization functions
+async function sendChangesToBackend() {
+    if (!gameState.id || pendingChanges.size === 0) return;
+    
+    try {
+        // Create batch data with only changed fields
+        const batchData = {
+            id: gameState.id,
+            timestamp: Date.now(),
+            changes: {}
+        };
+        
+        // Add only changed fields to batch
+        pendingChanges.forEach(field => {
+            if (field === 'upgrades') {
+                batchData.changes.upgrades = gameState.upgrades;
+            } else if (field === 'activeBoosters') {
+                batchData.changes.activeBoosters = gameState.activeBoosters;
+            } else if (field === 'completedTasks') {
+                batchData.changes.completedTasks = gameState.completedTasks;
+            } else {
+                batchData.changes[field] = gameState[field];
+            }
+        });
+        
+        const response = await fetch(`${backendUrl}/api/update-player/${gameState.id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(batchData)
+        });
+        
+        if (response.ok) {
+            console.log(`Batch sent to backend: ${pendingChanges.size} changes`);
+            pendingChanges.clear(); // Clear pending changes after successful send
+        } else {
+            console.error('Error sending batch to backend:', response.status);
+        }
+    } catch (error) {
+        console.error('Error sending batch to backend:', error);
+    }
+}
+
+async function syncFromBackend() {
+    if (!gameState.id) return;
+    
+    try {
+        const response = await fetch(`${backendUrl}/api/player-data/${gameState.id}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.player) {
+                const backendData = data.player;
+                
+                // Проверяем, изменились ли критические данные
+                const energyChanged = backendData.energy !== gameState.energy;
+                const maxEnergyChanged = backendData.max_energy !== gameState.maxEnergy;
+                const genoChanged = backendData.geno !== gameState.geno;
+                
+                if (energyChanged || maxEnergyChanged || genoChanged) {
+                    console.log('Backend data changed, syncing...');
                     
                     // Полностью заменяем gameState данными из backend
+                    const preservedId = gameState.id;
+                    
                     gameState = {
                         id: preservedId,
                         geno: backendData.geno || 0,
@@ -998,416 +1194,20 @@ async function loadGame() {
                         version: "1.0.0"
                     };
                     
-                    console.log('Game loaded from backend - data synchronized');
-                    checkReferral();
-                    updateDisplay();
-                    return;
-                }
-            }
-        } catch (error) {
-            console.log('Backend not available, trying Telegram Cloud Storage');
-        }
-        
-        // Fallback to Telegram Cloud Storage
-        window.Telegram.WebApp.CloudStorage.getItem('genoPlayer', (error, result) => {
-            if (!error && result) {
-                const savedData = JSON.parse(result);
-                gameState = { ...gameState, ...savedData };
-                // Reset energy recovery timer to prevent instant energy recovery
-                gameState.lastEnergyRecovery = Date.now();
-                console.log('Game loaded from Telegram Cloud Storage');
-            } else {
-                console.log('No saved data found, creating new player');
-                // ID is already set in initTelegramWebApp()
-            }
-            
-            // Check for referral after loading
-            checkReferral();
-            updateDisplay();
-        });
-    } else {
-        // Fallback to localStorage for testing
-        const saved = localStorage.getItem('genoPlayer');
-        if (saved) {
-            const savedData = JSON.parse(saved);
-            gameState = { ...gameState, ...savedData };
-            console.log('Game loaded from localStorage (testing mode)');
-        }
-        
-        // Check for referral
-        checkReferral();
-        updateDisplay();
-    }
-}
-
-function checkReferral() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const refId = urlParams.get('ref');
-    if (refId && refId !== gameState.id && !gameState.referredBy) {
-        gameState.referredBy = refId;
-        gameState.geno += 1000; // Referral bonus
-        showNotification('Бонус за приглашение: +1000 GENO!');
-        saveGame();
-    }
-}
-
-function getReferralLink() {
-    if (isInTelegramWebApp()) {
-        // Generate referral link for Telegram bot
-        if (botUsername) {
-            return `https://t.me/${botUsername}?start=ref_${gameState.id}`;
-        } else {
-            // Fallback if bot username not loaded yet
-            return `https://t.me/genogame_bot?start=ref_${gameState.id}`;
-        }
-    } else {
-        // Fallback for testing
-        return `${window.location.origin}${window.location.pathname}?ref=${gameState.id}`;
-    }
-}
-
-function shareReferralLink() {
-    const referralLink = getReferralLink();
-    
-    if (isInTelegramWebApp()) {
-        // Use Telegram Web App sharing
-        window.Telegram.WebApp.openTelegramLink(referralLink);
-    } else {
-        // Fallback for testing - copy to clipboard
-        navigator.clipboard.writeText(referralLink).then(() => {
-            showNotification('Реферальная ссылка скопирована в буфер обмена!');
-        }).catch(() => {
-            showNotification('Реферальная ссылка: ' + referralLink);
-        });
-    }
-}
-
-
-// Ping backend to prevent it from sleeping
-function pingBackend() {
-    if (isInTelegramWebApp()) {
-        fetch(`${backendUrl}/api/ping`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                userId: gameState.id || telegramUserId,
-                timestamp: Date.now(),
-                action: 'keep_alive'
-            })
-        }).catch(error => {
-            console.log('Backend ping failed (this is normal if backend is not deployed yet):', error);
-        });
-    }
-}
-
-// Set up periodic backend pings
-function setupBackendPings() {
-    if (isInTelegramWebApp()) {
-        // Ping every 5 minutes (300000 ms)
-        setInterval(pingBackend, 300000);
-        console.log('Backend ping system activated');
-    }
-}
-
-// Telegram Stars management
-function addTelegramStars(amount) {
-    gameState.telegramStars += amount;
-    updateDisplay();
-    showNotification(`Получено ${amount} ⭐ Telegram Stars!`);
-    saveGame();
-}
-
-function spendTelegramStars(amount) {
-    if (gameState.telegramStars >= amount) {
-        gameState.telegramStars -= amount;
-        updateDisplay();
-        saveGame();
-        return true;
-    }
-    return false;
-}
-
-// Show Telegram Stars purchase interface
-function showStarsPurchase() {
-    if (isInTelegramWebApp()) {
-        // Use Telegram Web App payment interface
-        window.Telegram.WebApp.showPopup({
-            title: 'Пополнить Telegram Stars',
-            message: 'Выберите количество звезд для покупки:',
-            buttons: [
-                { id: 'stars_10', type: 'default', text: '10 ⭐ - 100₽' },
-                { id: 'stars_50', type: 'default', text: '50 ⭐ - 450₽' },
-                { id: 'stars_100', type: 'default', text: '100 ⭐ - 800₽' },
-                { id: 'cancel', type: 'cancel', text: 'Отмена' }
-            ]
-        }, (buttonId) => {
-            if (buttonId === 'stars_10') {
-                purchaseStars(10);
-            } else if (buttonId === 'stars_50') {
-                purchaseStars(50);
-            } else if (buttonId === 'stars_100') {
-                purchaseStars(100);
-            }
-        });
-    } else {
-        // Show error message for non-Telegram environment
-        showNotification('Пополнение доступно только в Telegram!');
-    }
-}
-
-function purchaseStars(amount) {
-    if (isInTelegramWebApp()) {
-        // Request payment from backend (backend will handle bot token)
-        fetch(`${backendUrl}/api/create-payment`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                userId: gameState.id || telegramUserId,
-                amount: amount,
-                currency: 'RUB'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.invoice) {
-                // Use the invoice data from backend
-                window.Telegram.WebApp.openInvoice(data.invoice, (status) => {
-                    if (status === 'paid') {
-                        addTelegramStars(amount);
-                        showNotification(`Покупка ${amount} ⭐ успешна!`);
-                    } else if (status === 'failed') {
-                        showNotification('Ошибка при покупке. Попробуйте еще раз.');
-                    } else if (status === 'cancelled') {
-                        showNotification('Покупка отменена.');
-                    }
-                });
-            } else {
-                showNotification('Ошибка создания платежа. Попробуйте еще раз.');
-            }
-        })
-        .catch(error => {
-            console.error('Payment creation error:', error);
-            showNotification('Ошибка соединения с сервером.');
-        });
-    } else {
-        showNotification('Пополнение доступно только в Telegram!');
-    }
-}
-
-// Leaderboard functions
-async function loadLeaderboard() {
-    const leaderboardList = document.getElementById('leaderboardList');
-    const userRankElement = document.getElementById('userRank');
-    const totalPlayersElement = document.getElementById('totalPlayers');
-    
-    // Show loading state
-    leaderboardList.innerHTML = `
-        <div class="loading-spinner">
-            <div class="spinner"></div>
-            <p>Загрузка рейтинга...</p>
-        </div>
-    `;
-    
-    try {
-        const response = await fetch(`${backendUrl}/api/leaderboard?userId=${gameState.id}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to fetch leaderboard');
-        }
-        
-        const data = await response.json();
-        const leaderboard = data.leaderboard || [];
-        const userRank = data.userRank || null;
-        const totalPlayers = data.totalPlayers || 0;
-        
-        // Update stats
-        userRankElement.textContent = userRank ? `#${userRank}` : '-';
-        totalPlayersElement.textContent = totalPlayers;
-        
-        // Display leaderboard
-        if (leaderboard.length === 0) {
-            leaderboardList.innerHTML = `
-                <div class="leaderboard-error">
-                    <h4>Рейтинг пуст</h4>
-                    <p>Пока никто не играет. Станьте первым!</p>
-                </div>
-            `;
-            return;
-        }
-        
-        leaderboardList.innerHTML = leaderboard.map((player, index) => {
-            const isCurrentUser = player.id === gameState.id;
-            const rank = index + 1;
-            const rankClass = rank <= 3 ? `rank-${rank}` : '';
-            
-            // Get player name with fallback
-            let playerName = 'Аноним';
-            if (player.name) {
-                playerName = player.name;
-            } else if (player.first_name) {
-                playerName = player.first_name;
-                if (player.last_name) {
-                    playerName += ` ${player.last_name}`;
-                }
-            }
-            
-            return `
-                <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}">
-                    <div class="leaderboard-rank ${rankClass}">${rank}</div>
-                    <div class="leaderboard-player">
-                        <div class="leaderboard-name">${playerName}</div>
-                        <div class="leaderboard-stage">${player.stage || 'Клетка'}</div>
-                    </div>
-                    <div class="leaderboard-score">
-                        ${formatNumber(player.geno || 0)}
-                        <div class="leaderboard-score-label">GENO</div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-    } catch (error) {
-        leaderboardList.innerHTML = `
-            <div class="leaderboard-error">
-                <h4>Ошибка загрузки</h4>
-                <p>Не удалось загрузить рейтинг</p>
-                <button class="leaderboard-refresh" onclick="loadLeaderboard()">Попробовать снова</button>
-            </div>
-        `;
-    }
-}
-
-// Submit player data to leaderboard
-async function submitToLeaderboard() {
-    if (!isInTelegramWebApp()) return;
-    
-    try {
-        const user = window.Telegram.WebApp.initDataUnsafe?.user;
-        
-        // Debug: Log user data
-        console.log('Telegram user data:', user);
-        
-        // Get user name with fallback
-        let userName = 'Аноним';
-        if (user?.first_name) {
-            userName = user.first_name;
-            if (user.last_name) {
-                userName += ` ${user.last_name}`;
-            }
-        }
-        
-        const playerData = {
-            id: gameState.id,
-            name: userName,
-            username: user?.username || null,
-            first_name: user?.first_name || null,
-            last_name: user?.last_name || null,
-            geno: gameState.geno,
-            stage: stages[gameState.stageIndex]?.name || 'Клетка',
-            stageIndex: gameState.stageIndex,
-            totalClicks: gameState.totalClicks,
-            totalGenoEarned: gameState.totalGenoEarned,
-            lastActive: Date.now()
-        };
-        
-        await fetch(`${backendUrl}/api/leaderboard/submit`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(playerData)
-        });
-    } catch (error) {
-        // Silent fail - leaderboard is not critical
-    }
-}
-
-// Функция для отправки изменений в backend (вызывается при каждом изменении)
-async function sendChangesToBackend() {
-    if (!isInTelegramWebApp()) return;
-    
-    try {
-        const response = await fetch(`${backendUrl}/api/update-player/${gameState.id}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(gameState)
-        });
-        
-        if (response.ok) {
-            console.log('Changes sent to backend');
-        } else {
-            console.error('Error sending changes to backend:', response.status);
-        }
-    } catch (error) {
-        console.error('Error sending changes to backend:', error);
-    }
-}
-
-// Функция для синхронизации данных из backend
-async function syncFromBackend() {
-    if (!isInTelegramWebApp() || !gameState.id) return;
-    
-    try {
-        const response = await fetch(`${backendUrl}/api/player-data/${gameState.id}`);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.player) {
-                const backendData = data.player;
-                
-                // Проверяем, изменились ли критические данные
-                const energyChanged = backendData.energy !== gameState.energy;
-                const maxEnergyChanged = backendData.max_energy !== gameState.maxEnergy;
-                const genoChanged = backendData.geno !== gameState.geno;
-                
-                if (energyChanged || maxEnergyChanged || genoChanged) {
-                    console.log('Backend data changed, syncing...');
-                    
-                    // Обновляем только измененные поля
-                    if (energyChanged) {
-                        gameState.energy = backendData.energy;
-                        console.log(`Energy synced: ${gameState.energy}`);
-                    }
-                    if (maxEnergyChanged) {
-                        gameState.maxEnergy = backendData.max_energy;
-                        console.log(`Max energy synced: ${gameState.maxEnergy}`);
-                    }
-                    if (genoChanged) {
-                        gameState.geno = backendData.geno;
-                        console.log(`GENO synced: ${gameState.geno}`);
-                    }
-                    
-                    // Обновляем время восстановления энергии
-                    if (backendData.last_energy_recovery) {
-                        gameState.lastEnergyRecovery = new Date(backendData.last_energy_recovery).getTime();
-                    }
-                    
+                    console.log('Data synced from backend');
                     updateDisplay();
                 }
             }
         }
     } catch (error) {
-        // Silent fail - sync is not critical
+        console.error('Error syncing from backend:', error);
     }
 }
 
 // Initialize Game
 async function initGame() {
-    // Initialize Telegram Web App first
+    // Initialize Telegram Web App first (this will load data and connect SSE)
     initTelegramWebApp();
-    
-    // Load game data
-    await loadGame();
     
     // Event Listeners
     document.getElementById('dnaButton').addEventListener('click', handleClick);
@@ -1440,9 +1240,6 @@ async function initGame() {
     
     // Start game loop
     setInterval(gameLoop, 1000);
-    
-    // Setup backend pings to prevent Render from sleeping
-    setupBackendPings();
     
     // Debug functions for testing
     window.debugEnergy = function() {
@@ -1521,6 +1318,11 @@ async function initGame() {
     
     // Ensure display is updated after all initialization
     updateDisplay();
+    
+    // Handle page unload - disconnect SSE
+    window.addEventListener('beforeunload', () => {
+        disconnectSSE();
+    });
 }
 
 // Start the game
